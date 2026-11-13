@@ -1,0 +1,232 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coin Collector Game</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #101827;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    margin: 15px;
+    color: #ffd700;
+}
+
+#info {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    font-size: 20px;
+    margin: 15px;
+}
+
+canvas {
+    background: linear-gradient(#162b48, #244d65);
+    border: 3px solid white;
+    border-radius: 12px;
+    width: min(95vw, 700px);
+    height: auto;
+    touch-action: none;
+}
+
+button {
+    padding: 12px 25px;
+    margin: 10px;
+    border: none;
+    border-radius: 10px;
+    background: #ffb700;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.controls {
+    margin: 10px;
+}
+
+.controls button {
+    width: 65px;
+    height: 55px;
+    font-size: 25px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🪙 COIN COLLECTOR</h1>
+
+<div id="info">
+    <span>Score: <b id="score">0</b></span>
+    <span>❤️ Lives: <b id="lives">3</b></span>
+</div>
+
+<canvas id="game" width="700" height="400"></canvas>
+
+<div>
+    <button onclick="startGame()">🔄 Restart</button>
+</div>
+
+<div class="controls">
+    <button onpointerdown="move.left=true" onpointerup="move.left=false" onpointerleave="move.left=false">⬅️</button>
+    <button onpointerdown="move.up=true" onpointerup="move.up=false" onpointerleave="move.up=false">⬆️</button>
+    <button onpointerdown="move.down=true" onpointerup="move.down=false" onpointerleave="move.down=false">⬇️</button>
+    <button onpointerdown="move.right=true" onpointerup="move.right=false" onpointerleave="move.right=false">➡️</button>
+</div>
+
+<p>Keyboard: Arrow Keys या WASD इस्तेमाल करें।</p>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let player, coin, enemies, score, lives, running;
+let move = {left:false,right:false,up:false,down:false};
+
+function random(min,max) {
+    return Math.random()*(max-min)+min;
+}
+
+function spawnCoin() {
+    coin = {x:random(25,675), y:random(25,375), r:10};
+}
+
+function startGame() {
+    player = {x:350,y:200,r:15,speed:4};
+    enemies = [
+        {x:100,y:100,r:15,dx:2.5,dy:2},
+        {x:550,y:300,r:15,dx:-2,dy:2.5},
+        {x:350,y:50,r:15,dx:2,dy:-2}
+    ];
+    score = 0;
+    lives = 3;
+    running = true;
+    spawnCoin();
+    document.getElementById("score").textContent = score;
+    document.getElementById("lives").textContent = lives;
+}
+
+document.addEventListener("keydown", e => {
+    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))
+        e.preventDefault();
+
+    if(e.key==="ArrowLeft" || e.key==="a") move.left=true;
+    if(e.key==="ArrowRight" || e.key==="d") move.right=true;
+    if(e.key==="ArrowUp" || e.key==="w") move.up=true;
+    if(e.key==="ArrowDown" || e.key==="s") move.down=true;
+});
+
+document.addEventListener("keyup", e => {
+    if(e.key==="ArrowLeft" || e.key==="a") move.left=false;
+    if(e.key==="ArrowRight" || e.key==="d") move.right=false;
+    if(e.key==="ArrowUp" || e.key==="w") move.up=false;
+    if(e.key==="ArrowDown" || e.key==="s") move.down=false;
+});
+
+function drawPlayer() {
+    ctx.fillStyle="#36e0ff";
+    ctx.beginPath();
+    ctx.arc(player.x,player.y,player.r,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle="#111";
+    ctx.fillRect(player.x-7,player.y-4,4,4);
+    ctx.fillRect(player.x+4,player.y-4,4,4);
+}
+
+function update() {
+    if(!running) return;
+
+    if(move.left) player.x-=player.speed;
+    if(move.right) player.x+=player.speed;
+    if(move.up) player.y-=player.speed;
+    if(move.down) player.y+=player.speed;
+
+    player.x=Math.max(15,Math.min(685,player.x));
+    player.y=Math.max(15,Math.min(385,player.y));
+
+    enemies.forEach(e=>{
+        e.x+=e.dx;
+        e.y+=e.dy;
+
+        if(e.x<e.r || e.x>700-e.r) e.dx*=-1;
+        if(e.y<e.r || e.y>400-e.r) e.dy*=-1;
+
+        let d=Math.hypot(player.x-e.x,player.y-e.y);
+
+        if(d<player.r+e.r) {
+            lives--;
+            document.getElementById("lives").textContent=lives;
+            player.x=350;
+            player.y=200;
+
+            if(lives<=0) {
+                running=false;
+            }
+        }
+    });
+
+    if(Math.hypot(player.x-coin.x,player.y-coin.y)<player.r+coin.r) {
+        score+=10;
+        document.getElementById("score").textContent=score;
+        spawnCoin();
+
+        enemies.forEach(e=>{
+            e.dx*=1.05;
+            e.dy*=1.05;
+        });
+    }
+}
+
+function draw() {
+    ctx.clearRect(0,0,700,400);
+
+    ctx.fillStyle="#ffd700";
+    ctx.beginPath();
+    ctx.arc(coin.x,coin.y,coin.r,0,Math.PI*2);
+    ctx.fill();
+
+    enemies.forEach(e=>{
+        ctx.fillStyle="#ff4040";
+        ctx.beginPath();
+        ctx.arc(e.x,e.y,e.r,0,Math.PI*2);
+        ctx.fill();
+    });
+
+    drawPlayer();
+
+    if(!running) {
+        ctx.fillStyle="white";
+        ctx.textAlign="center";
+        ctx.font="bold 40px Arial";
+        ctx.fillText("GAME OVER!",350,180);
+        ctx.font="22px Arial";
+        ctx.fillText("Final Score: "+score,350,220);
+        ctx.fillText("Restart to Play Again",350,260);
+    }
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+startGame();
+loop();
+</script>
+
+</body>
+</html>
